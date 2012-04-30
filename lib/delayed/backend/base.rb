@@ -9,7 +9,8 @@ module Delayed
         # Add a job to the queue
         def enqueue(*args)
           options = {
-            :priority => Delayed::Worker.default_priority
+            :priority => Delayed::Worker.default_priority,
+            :collapse_key => nil
           }.merge!(args.extract_options!)
 
           options[:payload_object] ||= args.shift
@@ -28,7 +29,11 @@ module Delayed
             self.new(options).tap do |job|
               Delayed::Worker.lifecycle.run_callbacks(:enqueue, job) do
                 job.hook(:enqueue)
-                job.save
+                if job.respond_to?(:collapse!)
+                  job.collapse! 
+                else
+                  job.save 
+                end
               end
             end
           else
